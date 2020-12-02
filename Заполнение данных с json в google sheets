@@ -1,0 +1,53 @@
+import json
+from pprint import pprint
+
+from datetime import datetime
+
+
+import httplib2 
+import apiclient.discovery
+from oauth2client.service_account import ServiceAccountCredentials
+
+
+CREDENTIALS_FILE = 'mypy1-282115-979c06517fe3.json'
+
+credentials = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_FILE, 
+	          ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'])
+httpAuth = credentials.authorize(httplib2.Http())
+service = apiclient.discovery.build('sheets', 'v4', http = httpAuth)
+
+
+
+with open('channel_messages2.json', 'r', encoding='utf-8') as f: #открыли файл с данными
+    text = json.load(f) #загнали все, что получилось в переменную
+    # pprint(text) #вывели результат на экран
+
+# # for i in text["users"]:
+# #     print(i["message"])
+
+# # print(text["users"][1]["id"])
+
+df = 2
+
+
+for i in reversed(text["users"]):
+
+    qw = 'B{}'.format(df)
+
+    print(qw)
+    ld = i["date"]
+    sd = datetime.fromisoformat(ld).strftime('%H:%M %d.%m.%Y')
+    # print(i["user"], " ",  i["id"])
+    results = service.spreadsheets().values().batchUpdate(spreadsheetId = '1t0rIh1eZlX7yfhxpnvQyrwxVSHx_1VWTr0h6m3Eg58I', body = {
+        "valueInputOption": "USER_ENTERED", # Данные воспринимаются, как вводимые пользователем (считается значение формул)
+       "data": [
+            # {"range": "Лист номер один!B5:C10",
+            {"range": "Лист номер один!{}:E100".format(qw),
+             "majorDimension": "ROWS",     # Сначала заполнять строки, затем столбцы
+             "values": [
+                        ["{}".format(sd), "{}".format(i["from_id"]), "{}".format(i["message"])]
+                        # ["{A}","{B}","{C}".format(A=sd, B=i["from_id"], C=i["message"])] 
+                       ]}
+    ]
+    }).execute()
+    df = df + 1
